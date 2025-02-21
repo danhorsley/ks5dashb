@@ -27,6 +27,7 @@ cursor.execute("""
         stem_avg_grade REAL,
         arts_avg_grade REAL,
         econ_avg_grade REAL,
+        humanities_avg_grade,          
         PRIMARY KEY (urn, year)
     )
 """)
@@ -243,7 +244,17 @@ cursor.execute("""
                 WHEN grade = 'D' THEN CAST(number_exams AS INTEGER) * 2.0
                 WHEN grade = 'E' THEN CAST(number_exams AS INTEGER) * 1.0
                 ELSE 0 END ELSE 0 END) / 
-            NULLIF(SUM(CASE WHEN s.category = 'Business & Economics' AND number_exams != 'supp' THEN CAST(number_exams AS INTEGER) ELSE 0 END), 0) AS business_economics_avg_grade
+            NULLIF(SUM(CASE WHEN s.category = 'Business & Economics' AND number_exams != 'supp' THEN CAST(number_exams AS INTEGER) ELSE 0 END), 0) AS business_economics_avg_grade,
+        SUM(CASE WHEN s.category = 'Humanities' AND number_exams != 'supp' THEN 
+            CASE 
+                WHEN grade = '*' THEN CAST(number_exams AS INTEGER) * 6.0
+                WHEN grade = 'A' THEN CAST(number_exams AS INTEGER) * 5.0
+                WHEN grade = 'B' THEN CAST(number_exams AS INTEGER) * 4.0
+                WHEN grade = 'C' THEN CAST(number_exams AS INTEGER) * 3.0
+                WHEN grade = 'D' THEN CAST(number_exams AS INTEGER) * 2.0
+                WHEN grade = 'E' THEN CAST(number_exams AS INTEGER) * 1.0
+                ELSE 0 END ELSE 0 END) / 
+            NULLIF(SUM(CASE WHEN s.category = 'Humanities' AND number_exams != 'supp' THEN CAST(number_exams AS INTEGER) ELSE 0 END), 0) AS humanities_avg_grade
     FROM ks5_raw r
     LEFT JOIN subjects s ON r.subject = s.subject_name
     WHERE r.grade NOT IN ('Total', 'supp')
