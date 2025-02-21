@@ -12,16 +12,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/schools/{urn}")
-def get_school(urn: str):
+@app.get("/schools")
+def get_schools(urns: str):  # Accepts comma-separated URNs, e.g., "100001,100002"
+    urn_list = urns.split(",")
     conn = sqlite3.connect("C:/Users/eden_/OneDrive/Desktop/ks5dashb/schools.db")
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT year, total_entries, avg_grade, stem_avg_grade, arts_avg_grade 
-        FROM ks5_school_summary 
-        WHERE urn = ? 
-        ORDER BY year
-    """, (urn,))
-    data = [{"year": r[0], "entries": r[1], "avg_grade": r[2], "stem": r[3], "arts": r[4]} for r in cursor.fetchall()]
+    data = {}
+    for urn in urn_list:
+        cursor.execute("""
+            SELECT year, total_entries, avg_grade, stem_avg_grade, arts_avg_grade 
+            FROM ks5_school_summary 
+            WHERE urn = ? 
+            ORDER BY year
+        """, (urn.strip(),))
+        data[urn.strip()] = [{"year": r[0], "entries": r[1], "avg_grade": r[2], "stem": r[3], "arts": r[4]} for r in cursor.fetchall()]
     conn.close()
-    return {"school": urn, "data": data}
+    return data
