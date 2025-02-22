@@ -19,7 +19,10 @@ function App() {
     console.log("Search query:", searchQuery);  // Debug
     if (searchQuery.length > 0) {
       axios.get(`http://localhost:8000/search?q=${encodeURIComponent(searchQuery)}`)
-        .then(res => setSearchResults(res.data.data))
+        .then(res => {
+          console.log("Search results:", res.data.data);  // Debug
+          setSearchResults(res.data.data);
+        })
         .catch(err => {
           console.error("Search failed:", err);
           setSearchResults([]);  // Fallback
@@ -28,9 +31,10 @@ function App() {
   };
 
   const handleSelectSchool = (urn) => {
+    console.log("Selected URN:", urn);  // Debug
     setSelectedUrn(urn);
     setSearchQuery("");
-    setSearchResults([]);
+    setSearchResults([]);  // Clear results after selection
   };
 
   useEffect(() => {
@@ -40,6 +44,7 @@ function App() {
       axios.get(`http://localhost:8000/national-averages`),
       axios.get(`http://localhost:8000/regional-averages/${encodeURIComponent(region)}`)
     ]).then(([schoolRes, nationalRes, regionalRes]) => {
+      console.log("School data:", schoolRes.data.data);  // Debug: Log schoolData
       setSchoolData(schoolRes.data.data);
       setNationalData(nationalRes.data.data);
       setRegionalData(regionalRes.data.data);
@@ -51,14 +56,18 @@ function App() {
   const createChartData = (metric) => ({
     labels: schoolData.map(d => d.year),
     datasets: [
-      { label: `School ${selectedUrn} ${metric}`, data: schoolData.map(d => d[metric] || 0), borderColor: 'blue', fill: false, tension: 0.1 },
-      { label: `National ${metric}`, data: nationalData.map(d => d[metric] || 0), borderColor: 'gray', fill: false, tension: 0.1 },
-      { label: `Regional ${metric}`, data: regionalData.map(d => d[metric] || 0), borderColor: 'green', fill: false, tension: 0.1 },
+      { label: `${metric.charAt(0).toUpperCase() + metric.slice(1)}`, data: schoolData.map(d => d[metric] || 0), borderColor: 'blue', fill: false, tension: 0.1 }, // "School" dropped, use metric name
+      { label: `National`, data: nationalData.map(d => d[metric] || 0), borderColor: 'gray', fill: false, tension: 0.1 },
+      { label: `Regional`, data: regionalData.map(d => d[metric] || 0), borderColor: 'green', fill: false, tension: 0.1 },
     ],
   });
 
   const latestYear = 2024;
-  const school = schoolData.find(d => d.year === latestYear) || {};
+  // Use reduce to find the latest year's data
+  const school = schoolData.reduce((latest, current) => 
+    current.year > latest.year ? current : latest, 
+    schoolData[0] || {}
+  ) || {};
   const national = nationalData.find(d => d.year === latestYear) || {};
   const getSpread = (schoolValue, nationalValue) => (schoolValue - nationalValue).toFixed(2);
 
@@ -71,8 +80,8 @@ function App() {
   ];
 
   return (
-    <div className="p-5 max-w-4xl mx-auto">
-      <h1 className="text-3xl text-blue-700 mb-5">KS5 Dashboard - School {selectedUrn}</h1>
+    <div className="p-5 max-w-5xl mx-auto"> {/* Increased max width for better layout */}
+      <h1 className="text-3xl text-blue-700 mb-5">KS5 Dashboard - {school.school || `School ${selectedUrn}`} ({selectedUrn})</h1>
       <div className="mb-5 flex">
         <input
           type="text"
@@ -100,74 +109,82 @@ function App() {
           ))}
         </ul>
       )}
-      <div className="space-y-8 md:space-y-0 md:space-x-4 md:flex md:flex-col md:items-center">
-        <div className="bg-white p-5 rounded shadow">
-          <h2 className="text-xl text-gray-800 mb-2">Total Avg Grade</h2>
-          <Line data={createChartData('avg_grade')} options={{ responsive: true, scales: { y: { min: 0, max: 6, ticks: { stepSize: 0.5 } } }, plugins: { legend: { position: 'top' } } }} />
-        </div>
-        <div className="bg-white p-5 rounded shadow">
-          <h2 className="text-xl text-gray-800 mb-2">STEM Avg Grade</h2>
-          <Line data={createChartData('stem')} options={{ responsive: true, scales: { y: { min: 0, max: 6, ticks: { stepSize: 0.5 } } }, plugins: { legend: { position: 'top' } } }} />
-        </div>
-        <div className="bg-white p-5 rounded shadow">
-          <h2 className="text-xl text-gray-800 mb-2">Arts & Humanities Avg Grade</h2>
-          <Line data={createChartData('arts')} options={{ responsive: true, scales: { y: { min: 0, max: 6, ticks: { stepSize: 0.5 } } }, plugins: { legend: { position: 'top' } } }} />
-        </div>
-        <div className="bg-white p-5 rounded shadow">
-          <h2 className="text-xl text-gray-800 mb-2">Business & Economics Avg Grade</h2>
-          <Line data={createChartData('econ')} options={{ responsive: true, scales: { y: { min: 0, max: 6, ticks: { stepSize: 0.5 } } }, plugins: { legend: { position: 'top' } } }} />
-        </div>
-      </div>
-      <div className="mt-8">
-        <h2 className="text-xl text-gray-800 mb-2">School Information</h2>
-        <table className="w-full bg-white border rounded shadow">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 border">Metric</th>
-              <th className="p-2 border">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="p-2 border">School Name</td>
-              <td className="p-2 border">{schoolData[0]?.school || "N/A"}</td>
-            </tr>
-            <tr>
-              <td className="p-2 border">Local Authority</td>
-              <td className="p-2 border">{schoolData[0]?.la || "N/A"}</td>
-            </tr>
-            <tr>
-              <td className="p-2 border">Type of School</td>
-              <td className="p-2 border">{schoolData[0]?.type || "N/A"}</td>
-            </tr>
-            <tr>
-              <td className="p-2 border">Num Students</td>
-              <td className="p-2 border">{school.cohort || "N/A"}</td>
-            </tr>
-            <tr>
-              <td className="p-2 border">Min Age</td>
-              <td className="p-2 border">{schoolData[0]?.min_age || "N/A"}</td>
-            </tr>
-            <tr>
-              <td className="p-2 border">Max Age</td>
-              <td className="p-2 border">{schoolData[0]?.max_age || "N/A"}</td>
-            </tr>
-            <tr>
-              <td className="p-2 border">Num Staff</td>
-              <td className="p-2 border">N/A</td>
-            </tr>
-            <tr>
-              <td className="p-2 border">Staff Student Ratio</td>
-              <td className="p-2 border">N/A</td>
-            </tr>
-            {tableData.map(row => (
-              <tr key={row.category}>
-                <td className="p-2 border">{row.category} Avg Grade</td>
-                <td className="p-2 border">{row.avg.toFixed(2)} (Spread: {row.spread > 0 ? `+${row.spread}` : row.spread}, Trend: {row.trend})</td>
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Table on top/left on mobile, left on desktop (wider) */}
+        <div className="w-full md:w-1/2 bg-white p-5 rounded shadow">
+          <h2 className="text-xl text-gray-800 mb-2">School Information</h2>
+          <table className="w-full border rounded shadow">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2 border">Metric</th>
+                <th className="p-2 border">Value</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="p-2 border">School Name</td>
+                <td className="p-2 border">{school.school || "N/A"}</td>
+              </tr>
+              <tr>
+                <td className="p-2 border">Local Authority</td>
+                <td className="p-2 border">{school.la || "N/A"}</td>
+              </tr>
+              <tr>
+                <td className="p-2 border">Type of School</td>
+                <td className="p-2 border">{school.type || "N/A"}</td>
+              </tr>
+              <tr>
+                <td className="p-2 border">Num Students</td>
+                <td className="p-2 border">{school.cohort || "N/A"}</td>
+              </tr>
+              <tr>
+                <td className="p-2 border">Employment</td>
+                <td className="p-2 border">{school.employment || "N/A"}</td>
+              </tr>
+              <tr>
+                <td className="p-2 border">Min Age</td>
+                <td className="p-2 border">{school.min_age || "N/A"}</td>
+              </tr>
+              <tr>
+                <td className="p-2 border">Max Age</td>
+                <td className="p-2 border">{school.max_age || "N/A"}</td>
+              </tr>
+              <tr>
+                <td className="p-2 border">Num Staff</td>
+                <td className="p-2 border">{school.employment || "N/A"}</td>
+              </tr>
+              <tr>
+                <td className="p-2 border">Staff Student Ratio</td>
+                <td className="p-2 border">{school.staff_student_ratio || "N/A"}</td>
+              </tr>
+              {tableData.map(row => (
+                <tr key={row.category}>
+                  <td className="p-2 border">{row.category} Avg Grade</td>
+                  <td className="p-2 border">{row.avg.toFixed(2)} (Spread: {row.spread > 0 ? `+${row.spread}` : row.spread}, Trend: {row.trend})</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Charts on bottom/right on mobile, right on desktop */}
+        <div className="w-full md:w-1/2 space-y-4">
+          <div className="bg-white p-5 rounded shadow">
+            <h2 className="text-xl text-gray-800 mb-2">Total Grade</h2> {/* Updated title */}
+            <Line data={createChartData('avg_grade')} options={{ responsive: true, scales: { y: { min: 0, max: 6, ticks: { stepSize: 0.5 } } }, plugins: { legend: { position: 'top' } } }} />
+          </div>
+          <div className="bg-white p-5 rounded shadow">
+            <h2 className="text-xl text-gray-800 mb-2">STEM Grade</h2> {/* Updated title */}
+            <Line data={createChartData('stem')} options={{ responsive: true, scales: { y: { min: 0, max: 6, ticks: { stepSize: 0.5 } } }, plugins: { legend: { position: 'top' } } }} />
+          </div>
+          <div className="bg-white p-5 rounded shadow">
+            <h2 className="text-xl text-gray-800 mb-2">Arts & Humanities Grade</h2> {/* Updated title */}
+            <Line data={createChartData('arts')} options={{ responsive: true, scales: { y: { min: 0, max: 6, ticks: { stepSize: 0.5 } } }, plugins: { legend: { position: 'top' } } }} />
+          </div>
+          <div className="bg-white p-5 rounded shadow">
+            <h2 className="text-xl text-gray-800 mb-2">Business & Economics Grade</h2> {/* Updated title */}
+            <Line data={createChartData('econ')} options={{ responsive: true, scales: { y: { min: 0, max: 6, ticks: { stepSize: 0.5 } } }, plugins: { legend: { position: 'top' } } }} />
+          </div>
+        </div>
       </div>
     </div>
   );
