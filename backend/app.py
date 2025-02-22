@@ -45,7 +45,7 @@ def get_school(urn: str):
         SELECT e.year, e.total_entries, g.avg_grade, g.stem_avg_grade, g.arts_avg_grade, g.econ_avg_grade, g.humanities_avg_grade, 
                COALESCE(o.total_cohort, gs.number_students) AS cohort,  -- Year 13 Size
                COALESCE(o.total_employment, gs.number_students) AS employment,  -- Num Staff (fallback to number_students if no employment)
-               s.school_name, s.local_authority, s.school_type, s.age_low AS min_age, s.age_high AS max_age,
+               s.school_name, s.local_authority, s.minor_group, s.age_low AS min_age, s.age_high AS max_age,
                gs.number_students AS total_school_students,  -- Total School Students
                gs.num_boys, gs.num_girls, gs.gender, gs.is_selective, gs.head, gs.website
         FROM ks5_enrollment_summary e

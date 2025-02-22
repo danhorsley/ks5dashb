@@ -9,6 +9,7 @@ db_path = "C:/Users/eden_/OneDrive/Desktop/ks5dashb/schools.db"
 # Connect to SQLite
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
+cursor.execute("DROP TABLE IF EXISTS schools")
 
 # Create schools table
 cursor.execute("""
@@ -52,11 +53,11 @@ if os.path.exists(xlsx_path):
     ])
     
     # Map school_type (simple rule, adjust if needed)
-    df = df.with_columns(
-        pl.when(pl.col("school_type").str.contains("Independent"))
-        .then(pl.lit("Independent"))
-        .otherwise(pl.lit("State")).alias("school_type")
-    )
+    # df = df.with_columns(
+    #     pl.when(pl.col("school_type").str.contains("Independent"))
+    #     .then(pl.lit("Independent"))
+    #     .otherwise(pl.lit("State")).alias("school_type")
+    # )
     
     # Set region as local_authority for now
     df = df.with_columns(pl.col("local_authority").alias("region"))
