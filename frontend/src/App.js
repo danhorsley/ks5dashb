@@ -15,14 +15,15 @@ function App() {
   const [selectedUrn, setSelectedUrn] = useState("100001");
   const region = "City of London";  // Hardcode School 100001’s region (confirm)
 
-  const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-    if (e.target.value.length > 2) {
-      axios.get(`http://localhost:8000/schools/search?q=${e.target.value}`)
-        .then(res => setSearchResults(res.data))
-        .catch(err => console.error(err));
-    } else {
-      setSearchResults([]);
+  const handleSearch = () => {
+    console.log("Search query:", searchQuery);  // Debug
+    if (searchQuery.length > 0) {
+      axios.get(`http://localhost:8000/search?q=${encodeURIComponent(searchQuery)}`)
+        .then(res => setSearchResults(res.data.data))
+        .catch(err => {
+          console.error("Search failed:", err);
+          setSearchResults([]);  // Fallback
+        });
     }
   };
 
@@ -33,6 +34,7 @@ function App() {
   };
 
   useEffect(() => {
+    console.log("Fetching data for URN:", selectedUrn);  // Debug
     Promise.all([
       axios.get(`http://localhost:8000/schools/${selectedUrn}`),
       axios.get(`http://localhost:8000/national-averages`),
@@ -71,24 +73,33 @@ function App() {
   return (
     <div className="p-5 max-w-4xl mx-auto">
       <h1 className="text-3xl text-blue-700 mb-5">KS5 Dashboard - School {selectedUrn}</h1>
-      <div className="mb-5">
+      <div className="mb-5 flex">
         <input
           type="text"
           value={searchQuery}
-          onChange={handleSearch}
+          onChange={(e) => {
+            console.log("Typing:", e.target.value);  // Debug
+            setSearchQuery(e.target.value);
+          }}
           placeholder="Search by school name or URN"
-          className="border p-2 rounded w-full"
+          className="border p-2 rounded w-full mr-2"
         />
-        {searchResults.length > 0 && (
-          <ul className="border mt-2 rounded shadow">
-            {searchResults.map(result => (
-              <li key={result.urn} onClick={() => handleSelectSchool(result.urn)} className="p-2 hover:bg-gray-100 cursor-pointer">
-                {result.name} (URN: {result.urn}, LA: {result.la}, Type: {result.type})
-              </li>
-            ))}
-          </ul>
-        )}
+        <button
+          onClick={handleSearch}
+          className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+        >
+          Search
+        </button>
       </div>
+      {searchResults.length > 0 && (
+        <ul className="border mt-2 rounded shadow">
+          {searchResults.map(result => (
+            <li key={result.urn} onClick={() => handleSelectSchool(result.urn)} className="p-2 hover:bg-gray-100 cursor-pointer">
+              {result.name} (URN: {result.urn}, LA: {result.la}, Type: {result.type})
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="space-y-8 md:space-y-0 md:space-x-4 md:flex md:flex-col md:items-center">
         <div className="bg-white p-5 rounded shadow">
           <h2 className="text-xl text-gray-800 mb-2">Total Avg Grade</h2>
